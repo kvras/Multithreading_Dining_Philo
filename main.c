@@ -27,7 +27,12 @@ typedef struct
     pthread_mutex_t print;
     int nbr_forks;
     int id;
-} Table;
+    int time_to_die;
+    int time_to_eat;
+    int time_to_sleep;
+    int nbr_meals;
+    
+} philo;
 
 pthread_mutex_t *create_mutexes(nbr_philos)
 {
@@ -45,31 +50,31 @@ pthread_mutex_t *create_mutexes(nbr_philos)
 
 void *routine(void *arg)
 {
-    int id = ((Table *)arg)->id;
-    pthread_mutex_t *forks = ((Table *)arg)->forks;
+    int id = ((philo *)arg)->id;
+    pthread_mutex_t *forks = ((philo *)arg)->forks;
     while(1)
     {
         if(id % 2)
-                usleep(1);
-        pthread_mutex_lock(&((Table *)arg)->print);
+                usleep(10);
+        pthread_mutex_lock(&((philo *)arg)->print);
         printf("Philosopher %d is thinking\n", id);
-        pthread_mutex_unlock(&((Table *)arg)->print);
+        pthread_mutex_unlock(&((philo *)arg)->print);
         pthread_mutex_lock(&forks[id]);
-        if (pthread_mutex_lock(&forks[(id + 1) % ((Table *)arg)->nbr_forks]) != 0)
+        if (pthread_mutex_lock(&forks[(id + 1) % ((philo *)arg)->nbr_forks]) != 0)
         {
             pthread_mutex_unlock(&forks[id]);
             continue;
         }
-        pthread_mutex_lock(&((Table *)arg)->print);
+        pthread_mutex_lock(&((philo *)arg)->print);
         printf("Philosopher %d is eating\n", id);
         usleep(200);
-        pthread_mutex_unlock(&((Table *)arg)->print);
-        pthread_mutex_unlock(&forks[(id + 1) % ((Table *)arg)->nbr_forks]);
+        pthread_mutex_unlock(&((philo *)arg)->print);
         pthread_mutex_unlock(&forks[id]);
-        pthread_mutex_lock(&((Table *)arg)->print);
+        pthread_mutex_unlock(&forks[(id + 1) % ((philo *)arg)->nbr_forks]);
+        pthread_mutex_lock(&((philo *)arg)->print);
         printf("Philosopher %d is sleeping\n", id);
         usleep(200);
-        pthread_mutex_unlock(&((Table *)arg)->print);
+        pthread_mutex_unlock(&((philo *)arg)->print);
     }
     return NULL;
 }
@@ -78,17 +83,17 @@ void create_philos(int nbr)
 {
     int i;
     pthread_t philos[nbr];
-    Table *table = malloc(sizeof(Table) * nbr);
+    philo *philosopher = malloc(sizeof(philo) * nbr);
 
     i = 0;
     pthread_mutex_t *mutexes = create_mutexes(nbr);
-    pthread_mutex_init(&table->print, NULL);
+    pthread_mutex_init(&philosopher->print, NULL);
     while (i < nbr)
     {
-        table[i].forks = mutexes;
-        table[i].nbr_forks = nbr;
-        table[i].id = i;
-        pthread_create(&philos[i], NULL, routine, &table[i]);
+        philosopher[i].forks = mutexes;
+        philosopher[i].nbr_forks = nbr;
+        philosopher[i].id = i;
+        pthread_create(&philos[i], NULL, routine, &philosopher[i]);
         pthread_detach(philos[i]);
         i++;
     }
@@ -109,5 +114,6 @@ int main(int argc, char *argv[])
         return 1;
     }
     create_philos(nbr_philos);
+    while (1);
     return 0;
 }
