@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <sys/time.h>
 
 
 /*GitHub Copilot: `pthread_join` and `pthread_detach` are two functions provided by the POSIX threads library for managing the lifecycle of a thread.
@@ -21,17 +22,41 @@ In terms of benefits:
 
 You should use `pthread_join` when you need to wait for a thread to finish before proceeding, and `pthread_detach` when you want a thread to run independently and clean up automatically.*/
 
+long get_time(void)
+{
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    return ((tv.tv_sec * 1000) + (tv.tv_usec / 1000));
+}
+
+void    ft_sleep(long time_ms)
+{
+    long start = get_time();
+    while (get_time() - start <= time_ms)
+    {
+        usleep(500);
+    }
+}
+
+
+void    print(char *str, int id, pthread_mutex_t *print, long start_time)
+{
+    pthread_mutex_lock(print);
+    printf("%ld %d %s\n", get_time() - start_time, id, str);
+    pthread_mutex_unlock(print);
+}
+
 typedef struct
 {
     pthread_mutex_t *forks;
     pthread_mutex_t print;
-    int nbr_forks;
     int id;
+    int nbr_forks;
     int time_to_die;
     int time_to_eat;
     int time_to_sleep;
     int nbr_meals;
-    
+    long start_time;
 } philo;
 
 pthread_mutex_t *create_mutexes(nbr_philos)
@@ -52,29 +77,26 @@ void *routine(void *arg)
 {
     int id = ((philo *)arg)->id;
     pthread_mutex_t *forks = ((philo *)arg)->forks;
+    print("is thinking", id, &((philo *)arg)->print, ((philo *)arg)->start_time);
+    if(id % 2)
+        usleep(300);
     while(1)
     {
-        if(id % 2)
-                usleep(10);
-        pthread_mutex_lock(&((philo *)arg)->print);
-        printf("Philosopher %d is thinking\n", id);
-        pthread_mutex_unlock(&((philo *)arg)->print);
         pthread_mutex_lock(&forks[id]);
-        if (pthread_mutex_lock(&forks[(id + 1) % ((philo *)arg)->nbr_forks]) != 0)
-        {
-            pthread_mutex_unlock(&forks[id]);
-            continue;
-        }
-        pthread_mutex_lock(&((philo *)arg)->print);
-        printf("Philosopher %d is eating\n", id);
-        usleep(200);
-        pthread_mutex_unlock(&((philo *)arg)->print);
+        print("has taken a fork", id, &((philo *)arg)->print, ((philo *)arg)->start_time);
+        pthread_mutex_lock(&forks[(id + 1) % ((philo *)arg)->nbr_forks]);
+        print("has taken a fork", id, &((philo *)arg)->print, ((philo *)arg)->start_time);
+
+        print("is eating", id, &((philo *)arg)->print, ((philo *)arg)->start_time);
+        ft_sleep(200);
+
         pthread_mutex_unlock(&forks[id]);
         pthread_mutex_unlock(&forks[(id + 1) % ((philo *)arg)->nbr_forks]);
-        pthread_mutex_lock(&((philo *)arg)->print);
-        printf("Philosopher %d is sleeping\n", id);
-        usleep(200);
-        pthread_mutex_unlock(&((philo *)arg)->print);
+
+        print("is sleeping", id, &((philo *)arg)->print, ((philo *)arg)->start_time);
+        ft_sleep(200);
+
+        print("is thinking", id, &((philo *)arg)->print, ((philo *)arg)->start_time);
     }
     return NULL;
 }
@@ -88,11 +110,13 @@ void create_philos(int nbr)
     i = 0;
     pthread_mutex_t *mutexes = create_mutexes(nbr);
     pthread_mutex_init(&philosopher->print, NULL);
+
     while (i < nbr)
     {
         philosopher[i].forks = mutexes;
         philosopher[i].nbr_forks = nbr;
         philosopher[i].id = i;
+        philosopher[i].start_time = get_time();
         pthread_create(&philos[i], NULL, routine, &philosopher[i]);
         pthread_detach(philos[i]);
         i++;
@@ -108,7 +132,7 @@ int main(int argc, char *argv[])
         return 1;
     }
     nbr_philos = atoi(argv[1]);
-    if (nbr_philos < 2)
+    if (nbr_philos < 1)
     {
         printf("The number of philosophers must be at least 2\n");
         return 1;
