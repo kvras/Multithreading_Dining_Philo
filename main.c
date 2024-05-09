@@ -49,7 +49,7 @@ void    print(char *str, int id, pthread_mutex_t *print, long start_time)
 typedef struct
 {
     pthread_mutex_t *forks;
-    pthread_mutex_t print;
+    pthread_mutex_t *print;
     int id;
     int nbr_forks;
     int time_to_die;
@@ -75,45 +75,47 @@ pthread_mutex_t *create_mutexes(nbr_philos)
 
 void *routine(void *arg)
 {
-    int id = ((philo *)arg)->id;
-    pthread_mutex_t *forks = ((philo *)arg)->forks;
-    print("is thinking", id, &((philo *)arg)->print, ((philo *)arg)->start_time);
+    philo *philo = arg;
+    int id = philo->id;
+    pthread_mutex_t *forks = philo->forks;
+    // printf("%p\n", philo->print);
+    print("is thinking", id, philo->print, philo->start_time);
     if(id % 2)
         usleep(300);
     while(1)
     {
         pthread_mutex_lock(&forks[id]);
-        print("has taken a fork", id, &((philo *)arg)->print, ((philo *)arg)->start_time);
-        pthread_mutex_lock(&forks[(id + 1) % ((philo *)arg)->nbr_forks]);
-        print("has taken a fork", id, &((philo *)arg)->print, ((philo *)arg)->start_time);
+        print("has taken a fork", id, philo->print, (philo)->start_time);
+        pthread_mutex_lock(&forks[(id + 1) % (philo)->nbr_forks]);
+        print("has taken a fork", id, philo->print, (philo)->start_time);
 
-        print("is eating", id, &((philo *)arg)->print, ((philo *)arg)->start_time);
+        print("is eating", id, philo->print, (philo)->start_time);
         ft_sleep(200);
 
         pthread_mutex_unlock(&forks[id]);
-        pthread_mutex_unlock(&forks[(id + 1) % ((philo *)arg)->nbr_forks]);
+        pthread_mutex_unlock(&forks[(id + 1) % (philo)->nbr_forks]);
 
-        print("is sleeping", id, &((philo *)arg)->print, ((philo *)arg)->start_time);
+        print("is sleeping", id, philo->print, (philo)->start_time);
         ft_sleep(200);
 
-        print("is thinking", id, &((philo *)arg)->print, ((philo *)arg)->start_time);
+        print("is thinking", id, philo->print, (philo)->start_time);
     }
     return NULL;
 }
 
-void create_philos(int nbr)
+void create_philos(int nbr, pthread_mutex_t *forks, pthread_mutex_t *print_mutex)
 {
     int i;
     pthread_t philos[nbr];
+
     philo *philosopher = malloc(sizeof(philo) * nbr);
 
     i = 0;
-    pthread_mutex_t *mutexes = create_mutexes(nbr);
-    pthread_mutex_init(&philosopher->print, NULL);
 
     while (i < nbr)
     {
-        philosopher[i].forks = mutexes;
+        philosopher[i].print = print_mutex;
+        philosopher[i].forks = forks;
         philosopher[i].nbr_forks = nbr;
         philosopher[i].id = i;
         philosopher[i].start_time = get_time();
@@ -125,6 +127,8 @@ void create_philos(int nbr)
 
 int main(int argc, char *argv[])
 {
+    pthread_mutex_t print_mutex;
+
     int nbr_philos;
     if (argc != 2)
     {
@@ -137,7 +141,9 @@ int main(int argc, char *argv[])
         printf("The number of philosophers must be at least 2\n");
         return 1;
     }
-    create_philos(nbr_philos);
+    pthread_mutex_t *mutexes = create_mutexes(nbr_philos);
+    pthread_mutex_init(&print_mutex, NULL);
+    create_philos(nbr_philos, mutexes, &print_mutex);
     while (1);
     return 0;
 }
