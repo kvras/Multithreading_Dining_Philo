@@ -1,3 +1,4 @@
+![Alt text](philosophers.png)
 <h1>Dining Philosophers Problem</h1>
 
 <p>This project is a multi-threaded C program that solves the classic concurrency problem known as the Dining Philosophers Problem.</p>
