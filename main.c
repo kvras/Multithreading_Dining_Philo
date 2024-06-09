@@ -1,149 +1,131 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <pthread.h>
-#include <unistd.h>
-#include <sys/time.h>
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   main.c                                             :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: miguiji <miguiji@student.42.fr>            +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2024/06/09 04:56:53 by miguiji           #+#    #+#             */
+/*   Updated: 2024/06/09 05:08:03 by miguiji          ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
 
+#include "philo.h"
 
-/*GitHub Copilot: `pthread_join` and `pthread_detach` are two functions provided by the POSIX threads library for managing the lifecycle of a thread.
-
-`pthread_join` is used when you want the calling thread (usually the main thread) to wait for a specific thread to finish execution. This is useful 
-when you need to ensure that a certain task has been completed before proceeding. For example, if you have a thread that's performing some computation, 
-you might want to wait for that computation to finish before using the result in the main thread.
-
-`pthread_detach`, on the other hand, is used when you want to let a thread run independently and have its resources automatically cleaned up when it finishes.
- This is useful when you don't care about the result of the thread, or when you don't need to synchronize your code with the thread's completion. 
- Detached threads are often used for "fire-and-forget" tasks that run in the background.
-
-In terms of benefits:
-
-- `pthread_join` allows for easier synchronization and can be used to retrieve the return value of the thread function.
-- `pthread_detach` can save resources as it allows the system to immediately reclaim the thread's resources when it finishes execution.
-
-You should use `pthread_join` when you need to wait for a thread to finish before proceeding, and `pthread_detach` when you want a thread to run independently and clean up automatically.*/
-
-long get_time(void)
+void	*routine(void *arg)
 {
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
-    return ((tv.tv_sec * 1000) + (tv.tv_usec / 1000));
+	t_philo			*philo;
+	pthread_mutex_t	*forks;
+
+	philo = arg;
+	forks = philo->forks;
+	print("is thinking", philo->id, philo->start_time, philo->print_lock);
+	if (philo->id % 2)
+		ft_sleep(philo->args->time_eat / 2);
+	while (1)
+	{
+		pthread_mutex_lock(&forks[philo->id]);
+		print(FORK, philo->id + 1, (philo)->start_time, philo->print_lock);
+		pthread_mutex_lock(&forks[(philo->id + 1) % philo->args->num_philo]);
+		print(FORK, philo->id + 1, (philo)->start_time, philo->print_lock);
+		print(EAT, philo->id + 1, (philo)->start_time, philo->print_lock);
+		set(philo, get_time());
+		ft_sleep(philo->args->time_eat);
+		pthread_mutex_unlock(&forks[philo->id]);
+		pthread_mutex_unlock(&forks[(philo->id + 1) % philo->args->num_philo]);
+		print(SLEEP, philo->id + 1, (philo)->start_time, philo->print_lock);
+		ft_sleep(philo->args->time_sleep);
+		print(THINK, philo->id + 1, (philo)->start_time, philo->print_lock);
+	}
+	return (NULL);
 }
 
-void    ft_sleep(long time_ms)
+void	is_died(t_philo *philosophers, pthread_t *thread_id)
 {
-    long start = get_time();
-    while (get_time() - start <= time_ms)
-    {
-        usleep(500);
-    }
+	int		i;
+	long	time;
+	long	start_time;
+
+	while (1)
+	{
+		i = 0;
+		while (i < philosophers->args->num_philo)
+		{
+			start_time = philosophers[i].start_time;
+			time = get_time();
+			if (time - get(philosophers, i) >= philosophers->args->time_die)
+			{
+				print("died", i + 1, start_time, philosophers->print_lock);
+				sleep(1);
+				free(thread_id);
+				free_philo(philosophers);
+				return ;
+			}
+			i++;
+			usleep(1000);
+		}
+	}
 }
 
-
-void    print(char *str, int id, pthread_mutex_t *print, long start_time)
+void	philosophers(pthread_mutex_t *forks, t_args *args, long time)
 {
-    pthread_mutex_lock(print);
-    printf("%ld %d %s\n", get_time() - start_time, id, str);
-    pthread_mutex_unlock(print);
+	t_philo			*philosophers;
+	pthread_mutex_t	*print_lock;
+	pthread_t		*thread_id;
+	int				i;
+
+	if (!init_vars(&philosophers, args, &print_lock, &thread_id))
+		return ;
+	pthread_mutex_init(print_lock, NULL);
+	i = -1;
+	time = get_time();
+	while (++i < args->num_philo)
+	{
+		philosophers[i].forks = forks;
+		philosophers[i].args = args;
+		philosophers[i].id = i;
+		philosophers[i].start_time = time;
+		philosophers[i].last_time_eat = philosophers[i].start_time;
+		philosophers[i].lst_time_eat_lock = malloc(sizeof(pthread_mutex_t));
+		pthread_mutex_init(philosophers[i].lst_time_eat_lock, NULL);
+		philosophers[i].print_lock = print_lock;
+		pthread_create(&thread_id[i], NULL, routine, &philosophers[i]);
+		pthread_detach(thread_id[i]);
+	}
+	is_died(philosophers, thread_id);
+	return ;
 }
 
-typedef struct
+t_args	*is_valid_args(int argc, char *argv[])
 {
-    pthread_mutex_t *forks;
-    pthread_mutex_t *print;
-    int id;
-    int nbr_forks;
-    int time_to_die;
-    int time_to_eat;
-    int time_to_sleep;
-    int nbr_meals;
-    long start_time;
-} philo;
+	t_args	*args;
 
-pthread_mutex_t *create_mutexes(nbr_philos)
-{
-    int i;
-    pthread_mutex_t *forks = malloc(sizeof(pthread_mutex_t) * nbr_philos);
-
-    i = 0;
-    while (i < nbr_philos)
-    {
-        pthread_mutex_init(&forks[i], NULL);
-        i++;
-    }
-    return forks;
+	if (argc < 5 || argc > 6)
+	{
+		printf("Error: Wrong number of arguments\n");
+		return (NULL);
+	}
+	args = malloc(sizeof(t_args));
+	if (!args)
+		exit(1);
+	args->num_philo = atoi(argv[1]);
+	args->time_die = atoi(argv[2]);
+	args->time_eat = atoi(argv[3]);
+	args->time_sleep = atoi(argv[4]);
+	if (argc == 6)
+		args->num_eat = atoi(argv[5]);
+	else
+		args->num_eat = -1;
+	return (args);
 }
 
-void *routine(void *arg)
+int	main(int argc, char *argv[])
 {
-    philo *philo = arg;
-    int id = philo->id;
-    pthread_mutex_t *forks = philo->forks;
-    // printf("%p\n", philo->print);
-    print("is thinking", id, philo->print, philo->start_time);
-    if(id % 2)
-        usleep(300);
-    while(1)
-    {
-        pthread_mutex_lock(&forks[id]);
-        print("has taken a fork", id, philo->print, (philo)->start_time);
-        pthread_mutex_lock(&forks[(id + 1) % (philo)->nbr_forks]);
-        print("has taken a fork", id, philo->print, (philo)->start_time);
+	t_args			*args;
 
-        print("is eating", id, philo->print, (philo)->start_time);
-        ft_sleep(200);
-
-        pthread_mutex_unlock(&forks[id]);
-        pthread_mutex_unlock(&forks[(id + 1) % (philo)->nbr_forks]);
-
-        print("is sleeping", id, philo->print, (philo)->start_time);
-        ft_sleep(200);
-
-        print("is thinking", id, philo->print, (philo)->start_time);
-    }
-    return NULL;
-}
-
-void create_philos(int nbr, pthread_mutex_t *forks, pthread_mutex_t *print_mutex)
-{
-    int i;
-    pthread_t philos[nbr];
-
-    philo *philosopher = malloc(sizeof(philo) * nbr);
-
-    i = 0;
-
-    while (i < nbr)
-    {
-        philosopher[i].print = print_mutex;
-        philosopher[i].forks = forks;
-        philosopher[i].nbr_forks = nbr;
-        philosopher[i].id = i;
-        philosopher[i].start_time = get_time();
-        pthread_create(&philos[i], NULL, routine, &philosopher[i]);
-        pthread_detach(philos[i]);
-        i++;
-    }
-}
-
-int main(int argc, char *argv[])
-{
-    pthread_mutex_t print_mutex;
-
-    int nbr_philos;
-    if (argc != 2)
-    {
-        printf("Usage: %s <number of philosophers>\n", argv[0]);
-        return 1;
-    }
-    nbr_philos = atoi(argv[1]);
-    if (nbr_philos < 1)
-    {
-        printf("The number of philosophers must be at least 2\n");
-        return 1;
-    }
-    pthread_mutex_t *mutexes = create_mutexes(nbr_philos);
-    pthread_mutex_init(&print_mutex, NULL);
-    create_philos(nbr_philos, mutexes, &print_mutex);
-    while (1);
-    return 0;
+	args = is_valid_args(argc, argv);
+	if (!args)
+		return (0);
+	philosophers(create_mutexes(args->num_philo), args, 0);
+	return (0);
 }
