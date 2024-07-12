@@ -6,7 +6,7 @@
 /*   By: miguiji <miguiji@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/06/09 04:51:35 by miguiji           #+#    #+#             */
-/*   Updated: 2024/06/09 05:08:25 by miguiji          ###   ########.fr       */
+/*   Updated: 2024/07/12 23:35:50 by miguiji          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -26,6 +26,8 @@ pthread_mutex_t	*create_mutexes(int nbr_philos)
 	pthread_mutex_t		*forks;
 
 	forks = malloc(sizeof(pthread_mutex_t) * nbr_philos);
+	if (!forks)
+		return (NULL);
 	i = 0;
 	while (i < nbr_philos)
 	{
