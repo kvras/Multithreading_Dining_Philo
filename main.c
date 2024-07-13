@@ -6,7 +6,7 @@
 /*   By: miguiji <miguiji@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/06/09 04:56:53 by miguiji           #+#    #+#             */
-/*   Updated: 2024/07/13 23:19:57 by miguiji          ###   ########.fr       */
+/*   Updated: 2024/07/13 23:51:49 by miguiji          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -91,7 +91,13 @@ void	philosophers(pthread_mutex_t *forks, t_args *args, int i)
 	pthread_mutex_init(print_lock, NULL);
 	while (++i < args->num_philo)
 	{
-		assign_vars(philosophers, i, args, forks);
+		philosophers[i].forks = forks;
+		philosophers[i].args = args;
+		philosophers[i].id = i;
+		philosophers[i].start_time = time;
+		philosophers[i].last_time_eat = philosophers[i].start_time;
+		philosophers[i].lst_time_eat_lock = malloc(sizeof(pthread_mutex_t));
+		pthread_mutex_init(philosophers[i].lst_time_eat_lock, NULL);
 		philosophers[i].print_lock = print_lock;
 		philosophers[i].last_time_eat_lock = malloc(sizeof(pthread_mutex_t));
 		if (!philosophers[i].last_time_eat_lock)
@@ -134,9 +140,6 @@ int	main(int argc, char *argv[])
 	args = is_valid_args(argc, argv);
 	if (!args)
 		return (0);
-	forks = create_mutexes(args->num_philo);
-	if (!forks)
-		return (0);
-	philosophers(forks, args, -1);
+	philosophers(create_mutexes(args->num_philo), args, 0);
 	return (0);
 }
