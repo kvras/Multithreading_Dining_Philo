@@ -6,7 +6,7 @@
 /*   By: miguiji <miguiji@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/06/09 04:51:35 by miguiji           #+#    #+#             */
-/*   Updated: 2024/07/12 23:35:50 by miguiji          ###   ########.fr       */
+/*   Updated: 2024/07/13 23:08:17 by miguiji          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -40,9 +40,6 @@ pthread_mutex_t	*create_mutexes(int nbr_philos)
 bool	init_vars(t_philo **philosophers, t_args *args,
 			pthread_mutex_t **print_lock, pthread_t **thread_id)
 {
-	int	i;
-
-	i = 0;
 	*philosophers = malloc(sizeof(t_philo) * args->num_philo);
 	if (!*philosophers)
 		return (false);

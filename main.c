@@ -6,7 +6,7 @@
 /*   By: miguiji <miguiji@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/06/09 04:56:53 by miguiji           #+#    #+#             */
-/*   Updated: 2024/07/13 00:02:50 by miguiji          ###   ########.fr       */
+/*   Updated: 2024/07/13 23:19:57 by miguiji          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,7 +19,7 @@ void	*routine(void *arg)
 
 	philo = arg;
 	forks = philo->forks;
-	print("is thinking", philo->id, philo->start_time, philo->print_lock);
+	print("is thinking", philo->id + 1, philo->start_time, philo->print_lock);
 	if (philo->id % 2)
 		ft_sleep(philo->args->time_eat / 2);
 	while (1)
@@ -67,30 +67,36 @@ void	is_died(t_philo *philo, pthread_t *thread_id)
 	}
 }
 
-void	philosophers(pthread_mutex_t *forks, t_args *args, long time)
+void	assign_vars(t_philo *philo, int i, t_args *args, pthread_mutex_t *forks)
+{
+	long	time;
+
+	time = get_time();
+	philo[i].args = args;
+	philo[i].id = i;
+	philo[i].start_time = time;
+	philo[i].last_time_eat = time;
+	philo[i].num_eat = 0;
+	philo[i].forks = forks;
+}
+
+void	philosophers(pthread_mutex_t *forks, t_args *args, int i)
 {
 	t_philo			*philosophers;
 	pthread_mutex_t	*print_lock;
 	pthread_t		*thread_id;
-	int				i;
 
 	if (!init_vars(&philosophers, args, &print_lock, &thread_id))
 		return ;
 	pthread_mutex_init(print_lock, NULL);
-	i = -1;
-	time = get_time();
 	while (++i < args->num_philo)
 	{
-		philosophers[i].forks = forks;
-		philosophers[i].args = args;
-		philosophers[i].id = i;
-		philosophers[i].start_time = time;
-		philosophers[i].last_time_eat = time;
+		assign_vars(philosophers, i, args, forks);
+		philosophers[i].print_lock = print_lock;
 		philosophers[i].last_time_eat_lock = malloc(sizeof(pthread_mutex_t));
 		if (!philosophers[i].last_time_eat_lock)
 			return ;
 		pthread_mutex_init(philosophers[i].last_time_eat_lock, NULL);
-		philosophers[i].print_lock = print_lock;
 		pthread_create(&thread_id[i], NULL, routine, &philosophers[i]);
 		pthread_detach(thread_id[i]);
 	}
@@ -131,6 +137,6 @@ int	main(int argc, char *argv[])
 	forks = create_mutexes(args->num_philo);
 	if (!forks)
 		return (0);
-	philosophers(forks, args, 0);
+	philosophers(forks, args, -1);
 	return (0);
 }
