@@ -6,7 +6,7 @@
 /*   By: miguiji <miguiji@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/06/09 04:56:53 by miguiji           #+#    #+#             */
-/*   Updated: 2024/07/16 05:14:26 by miguiji          ###   ########.fr       */
+/*   Updated: 2024/07/17 00:31:31 by miguiji          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,8 +16,9 @@ void	*routine(void *arg)
 {
 	t_philo			*philo;
 	pthread_mutex_t	*forks;
-	long			meals = 0;
+	int				meals;
 
+	meals = 0;
 	philo = arg;
 	forks = philo->forks;
 	print("is thinking", philo->id + 1, philo->start_time, philo->print_lock);
@@ -30,15 +31,7 @@ void	*routine(void *arg)
 		pthread_mutex_lock(&forks[(philo->id + 1) % philo->args->num_philo]);
 		print(FORK, philo->id + 1, (philo)->start_time, philo->print_lock);
 		print(EAT, philo->id + 1, (philo)->start_time, philo->print_lock);
-		set(philo, get_time());
-		++meals;
-		if (meals == philo->args->num_eat)
-		{
-			pthread_mutex_lock(philo->meals_lock);
-			++philo->num_philo_eat;
-			pthread_mutex_unlock(philo->meals_lock);
-		}
-		ft_sleep(philo->args->time_eat);
+		eating(philo, &meals);
 		pthread_mutex_unlock(&forks[philo->id]);
 		pthread_mutex_unlock(&forks[(philo->id + 1) % philo->args->num_philo]);
 		print(SLEEP, philo->id + 1, (philo)->start_time, philo->print_lock);
@@ -47,19 +40,9 @@ void	*routine(void *arg)
 	}
 	return (NULL);
 }
-long get_eat(t_philo philo)
-{
-	long num_eat;
 
-	pthread_mutex_lock(philo.meals_lock);
-	num_eat = philo.num_philo_eat;
-	pthread_mutex_unlock(philo.meals_lock);
-	return (num_eat);
-}
-void	is_died(t_philo *philo, pthread_t *thread_id)
+void	is_died(t_philo *philo, pthread_t *thread_id, int i, long time)
 {
-	int		i;
-	long	time;
 	long	start_time;
 
 	while (1)
@@ -70,7 +53,7 @@ void	is_died(t_philo *philo, pthread_t *thread_id)
 			start_time = philo[i].start_time;
 			time = get_time();
 			if (time - get(philo, i) >= philo[i].args->time_die || \
-				get_eat(philo[i]) == philo[i].args->num_eat)
+				get_eat(philo[i]) == philo[i].args->num_philo)
 			{
 				if (time - get(philo, i) >= philo[i].args->time_die)
 					print("died", i + 1, start_time, philo[i].print_lock);
@@ -87,46 +70,32 @@ void	is_died(t_philo *philo, pthread_t *thread_id)
 	}
 }
 
-void	assign_vars(t_philo *philo, int i, t_args *args, pthread_mutex_t *forks)
-{
-	long	time;
-
-	time = get_time();
-	philo[i].args = args;
-	philo[i].id = i;
-	philo[i].start_time = time;
-	philo[i].last_time_eat = time;
-	philo[i].num_philo_eat = 0;
-	philo[i].forks = forks;
-}
-
 void	philosophers(pthread_mutex_t *forks, t_args *args, int i)
 {
 	t_philo			*philosophers;
-	pthread_mutex_t	*print_lock;
 	pthread_t		*thread_id;
-	pthread_mutex_t	*meals_lock;
+	int				*var;
 
-	if (!init_vars(&philosophers, args, &print_lock, &thread_id))
+	var = malloc(sizeof(int));
+	if (!var)
 		return ;
-	pthread_mutex_init(print_lock, NULL);
-	meals_lock = malloc(sizeof(pthread_mutex_t));
-	if (!meals_lock)
+	*var = 0;
+	if (!init_vars(&philosophers, args, &thread_id))
 		return ;
-	pthread_mutex_init(meals_lock, NULL);
 	while (++i < args->num_philo)
 	{
 		assign_vars(philosophers, i, args, forks);
-		philosophers[i].print_lock = print_lock;
-		philosophers[i].meals_lock = meals_lock;
+		philosophers[i].num_philo_eat = var;
 		philosophers[i].last_time_eat_lock = malloc(sizeof(pthread_mutex_t));
 		if (!philosophers[i].last_time_eat_lock)
 			return ;
+		philosophers[i].print_lock = philosophers->print_lock;
+		philosophers[i].meals_lock = philosophers->meals_lock;
 		pthread_mutex_init(philosophers[i].last_time_eat_lock, NULL);
 		pthread_create(&thread_id[i], NULL, routine, &philosophers[i]);
 		pthread_detach(thread_id[i]);
 	}
-	is_died(philosophers, thread_id);
+	is_died(philosophers, thread_id, 0, 0);
 }
 
 t_args	*is_valid_args(int argc, char *argv[])
@@ -134,10 +103,7 @@ t_args	*is_valid_args(int argc, char *argv[])
 	t_args	*args;
 
 	if (argc < 5 || argc > 6)
-	{
-		printf("Error: Wrong number of arguments\n");
-		return (NULL);
-	}
+		return (printf("Error: Wrong number of arguments\n"), NULL);
 	args = malloc(sizeof(t_args));
 	if (!args)
 		return (NULL);
@@ -145,8 +111,15 @@ t_args	*is_valid_args(int argc, char *argv[])
 	args->time_die = ft_atoi(argv[2]);
 	args->time_eat = ft_atoi(argv[3]);
 	args->time_sleep = ft_atoi(argv[4]);
+	if (args->num_philo < 1 || args->time_die < 0 || args->time_eat < 0 || \
+		args->time_sleep < 0)
+		return (printf("Error: Wrong arguments\n"), free(args), NULL);
 	if (argc == 6)
+	{
 		args->num_eat = ft_atoi(argv[5]);
+		if (args->num_eat < 1)
+			return (printf("Error: Wrong arguments\n"), free(args), NULL);
+	}
 	else
 		args->num_eat = -1;
 	return (args);

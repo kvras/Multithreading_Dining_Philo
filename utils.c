@@ -6,7 +6,7 @@
 /*   By: miguiji <miguiji@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/06/09 04:46:15 by miguiji           #+#    #+#             */
-/*   Updated: 2024/07/16 04:24:46 by miguiji          ###   ########.fr       */
+/*   Updated: 2024/07/17 00:31:01 by miguiji          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -31,11 +31,19 @@ void	free_philo(t_philo *philo)
 	free(philo);
 }
 
-void	set(t_philo *philosophers, long time)
+void	eating(t_philo *philo, int *meals)
 {
-	pthread_mutex_lock(philosophers->last_time_eat_lock);
-	philosophers->last_time_eat = time;
-	pthread_mutex_unlock(philosophers->last_time_eat_lock);
+	ft_sleep(philo->args->time_eat);
+	++(*meals);
+	if (*meals == philo->args->num_eat)
+	{
+		pthread_mutex_lock(philo->meals_lock);
+		++(*philo->num_philo_eat);
+		pthread_mutex_unlock(philo->meals_lock);
+	}
+	pthread_mutex_lock(philo->last_time_eat_lock);
+	philo->last_time_eat = get_time();
+	pthread_mutex_unlock(philo->last_time_eat_lock);
 }
 
 long	get(t_philo *philosophers, int i)
