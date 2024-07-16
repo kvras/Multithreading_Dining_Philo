@@ -1,5 +1,5 @@
 CC = CC
-CFLAGS = -Wall -Wextra -Werror
+CFLAGS = -Wall -Wextra -Werror -fsanitize=thread
 SRC = main.c mutexes.c utils.c ft_atoi.c
 OBJ = $(SRC:.c=.o)
 NAME = philo
@@ -17,3 +17,5 @@ clean:
 
 fclean: clean
 	rm -f $(NAME)
+
+re : fclean all

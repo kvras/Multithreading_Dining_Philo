@@ -6,7 +6,7 @@
 /*   By: miguiji <miguiji@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/06/09 04:56:53 by miguiji           #+#    #+#             */
-/*   Updated: 2024/07/13 23:19:57 by miguiji          ###   ########.fr       */
+/*   Updated: 2024/07/16 05:14:26 by miguiji          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,6 +16,7 @@ void	*routine(void *arg)
 {
 	t_philo			*philo;
 	pthread_mutex_t	*forks;
+	long			meals = 0;
 
 	philo = arg;
 	forks = philo->forks;
@@ -30,6 +31,13 @@ void	*routine(void *arg)
 		print(FORK, philo->id + 1, (philo)->start_time, philo->print_lock);
 		print(EAT, philo->id + 1, (philo)->start_time, philo->print_lock);
 		set(philo, get_time());
+		++meals;
+		if (meals == philo->args->num_eat)
+		{
+			pthread_mutex_lock(philo->meals_lock);
+			++philo->num_philo_eat;
+			pthread_mutex_unlock(philo->meals_lock);
+		}
 		ft_sleep(philo->args->time_eat);
 		pthread_mutex_unlock(&forks[philo->id]);
 		pthread_mutex_unlock(&forks[(philo->id + 1) % philo->args->num_philo]);
@@ -39,7 +47,15 @@ void	*routine(void *arg)
 	}
 	return (NULL);
 }
+long get_eat(t_philo philo)
+{
+	long num_eat;
 
+	pthread_mutex_lock(philo.meals_lock);
+	num_eat = philo.num_philo_eat;
+	pthread_mutex_unlock(philo.meals_lock);
+	return (num_eat);
+}
 void	is_died(t_philo *philo, pthread_t *thread_id)
 {
 	int		i;
@@ -53,10 +69,14 @@ void	is_died(t_philo *philo, pthread_t *thread_id)
 		{
 			start_time = philo[i].start_time;
 			time = get_time();
-			if (time - get(philo, i) >= philo->args->time_die)
+			if (time - get(philo, i) >= philo[i].args->time_die || \
+				get_eat(philo[i]) == philo[i].args->num_eat)
 			{
-				print("died", i + 1, start_time, philo->print_lock);
-				ft_sleep(philo->args->time_die + philo->args->time_eat);
+				if (time - get(philo, i) >= philo[i].args->time_die)
+					print("died", i + 1, start_time, philo[i].print_lock);
+				else
+					pthread_mutex_lock(philo[i].print_lock);
+				ft_sleep(philo[i].args->time_sleep + philo[i].args->time_eat);
 				free(thread_id);
 				free_philo(philo);
 				return ;
@@ -76,7 +96,7 @@ void	assign_vars(t_philo *philo, int i, t_args *args, pthread_mutex_t *forks)
 	philo[i].id = i;
 	philo[i].start_time = time;
 	philo[i].last_time_eat = time;
-	philo[i].num_eat = 0;
+	philo[i].num_philo_eat = 0;
 	philo[i].forks = forks;
 }
 
@@ -85,14 +105,20 @@ void	philosophers(pthread_mutex_t *forks, t_args *args, int i)
 	t_philo			*philosophers;
 	pthread_mutex_t	*print_lock;
 	pthread_t		*thread_id;
+	pthread_mutex_t	*meals_lock;
 
 	if (!init_vars(&philosophers, args, &print_lock, &thread_id))
 		return ;
 	pthread_mutex_init(print_lock, NULL);
+	meals_lock = malloc(sizeof(pthread_mutex_t));
+	if (!meals_lock)
+		return ;
+	pthread_mutex_init(meals_lock, NULL);
 	while (++i < args->num_philo)
 	{
 		assign_vars(philosophers, i, args, forks);
 		philosophers[i].print_lock = print_lock;
+		philosophers[i].meals_lock = meals_lock;
 		philosophers[i].last_time_eat_lock = malloc(sizeof(pthread_mutex_t));
 		if (!philosophers[i].last_time_eat_lock)
 			return ;

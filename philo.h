@@ -6,7 +6,7 @@
 /*   By: miguiji <miguiji@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/06/09 04:47:50 by miguiji           #+#    #+#             */
-/*   Updated: 2024/07/13 00:02:42 by miguiji          ###   ########.fr       */
+/*   Updated: 2024/07/16 05:05:55 by miguiji          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -31,7 +31,7 @@ typedef struct s_args
 	long	time_die;
 	long	time_eat;
 	long	time_sleep;
-	int		num_eat;
+	long	num_eat;
 }	t_args;
 
 typedef struct s_philo
@@ -41,9 +41,10 @@ typedef struct s_philo
 	int				id;
 	long			start_time;
 	long			last_time_eat;
-	int				num_eat;
+	long			num_philo_eat;
 	pthread_mutex_t	*last_time_eat_lock;
 	pthread_mutex_t	*print_lock;
+	pthread_mutex_t	*meals_lock;
 }	t_philo;
 
 pthread_mutex_t	*create_mutexes(int nbr_philos);
