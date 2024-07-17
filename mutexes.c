@@ -6,7 +6,7 @@
 /*   By: miguiji <miguiji@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/06/09 04:51:35 by miguiji           #+#    #+#             */
-/*   Updated: 2024/07/17 00:02:27 by miguiji          ###   ########.fr       */
+/*   Updated: 2024/07/17 01:47:17 by miguiji          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -44,23 +44,21 @@ bool	init_vars(t_philo **philosophers, t_args *args, pthread_t **thread_id)
 		return (false);
 	*thread_id = malloc(args->num_philo * sizeof(pthread_t));
 	if (!*thread_id)
-	{
-		free(*philosophers);
-		return (false);
-	}
+		return (free(*philosophers), false);
 	(*philosophers)->print_lock = malloc(sizeof(pthread_mutex_t));
 	if (!(*philosophers)->print_lock)
 	{
 		free(*philosophers);
-		free(*thread_id);
+		return (free(*thread_id), false);
 	}
 	pthread_mutex_init((*philosophers)->print_lock, NULL);
 	(*philosophers)->meals_lock = malloc(sizeof(pthread_mutex_t));
 	if (!(*philosophers)->meals_lock)
 	{
+		pthread_mutex_destroy((*philosophers)->print_lock);
 		free(*philosophers);
 		free(*thread_id);
-		free((*philosophers)->print_lock);
+		return (free((*philosophers)->print_lock), false);
 	}
 	pthread_mutex_init((*philosophers)->meals_lock, NULL);
 	return (true);

@@ -6,7 +6,7 @@
 /*   By: miguiji <miguiji@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/06/09 04:56:53 by miguiji           #+#    #+#             */
-/*   Updated: 2024/07/17 00:31:31 by miguiji          ###   ########.fr       */
+/*   Updated: 2024/07/17 05:52:15 by miguiji          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -70,32 +70,30 @@ void	is_died(t_philo *philo, pthread_t *thread_id, int i, long time)
 	}
 }
 
-void	philosophers(pthread_mutex_t *forks, t_args *args, int i)
+bool	philosophers(pthread_mutex_t *forks, t_args *args, int i)
 {
 	t_philo			*philosophers;
 	pthread_t		*thread_id;
-	int				*var;
+	int				var;
 
-	var = malloc(sizeof(int));
-	if (!var)
-		return ;
-	*var = 0;
+	var = 0;
 	if (!init_vars(&philosophers, args, &thread_id))
-		return ;
+		return (free(args), free(forks), false);
 	while (++i < args->num_philo)
 	{
 		assign_vars(philosophers, i, args, forks);
-		philosophers[i].num_philo_eat = var;
+		philosophers[i].num_philo_eat = &var;
 		philosophers[i].last_time_eat_lock = malloc(sizeof(pthread_mutex_t));
 		if (!philosophers[i].last_time_eat_lock)
-			return ;
+			return (free_philo(philosophers), false);
+		pthread_mutex_init(philosophers[i].last_time_eat_lock, NULL);
 		philosophers[i].print_lock = philosophers->print_lock;
 		philosophers[i].meals_lock = philosophers->meals_lock;
-		pthread_mutex_init(philosophers[i].last_time_eat_lock, NULL);
 		pthread_create(&thread_id[i], NULL, routine, &philosophers[i]);
 		pthread_detach(thread_id[i]);
 	}
 	is_died(philosophers, thread_id, 0, 0);
+	return (true);
 }
 
 t_args	*is_valid_args(int argc, char *argv[])
@@ -135,7 +133,7 @@ int	main(int argc, char *argv[])
 		return (0);
 	forks = create_mutexes(args->num_philo);
 	if (!forks)
-		return (0);
+		return (free(args), 0);
 	philosophers(forks, args, -1);
 	return (0);
 }

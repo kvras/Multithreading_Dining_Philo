@@ -6,34 +6,35 @@
 /*   By: miguiji <miguiji@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/07 11:02:46 by miguiji           #+#    #+#             */
-/*   Updated: 2024/07/07 11:02:50 by miguiji          ###   ########.fr       */
+/*   Updated: 2024/07/17 05:54:16 by miguiji          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "philo.h"
 
-int	ft_atoi(const char *str)
+long	ft_atoi(const char *str)
 {
-	int	i;
-	int	signe;
-	int	a;
+	int					signe;
+	long				a;
+	int					i;
 
 	a = 0;
-	signe = 1;
 	i = 0;
-	while ((str[i] >= 9 && str[i] <= 13) || str[i] == 32)
-		i++;
-	if (str[i] == 45)
+	signe = 1;
+	if (str[i] == '-' || str[i] == '+')
 	{
-		signe = signe * -1;
-		i++;
+		if (str[i++] == '-')
+			signe = -1;
 	}
-	else if (str[i] == 43)
-		i++;
-	while (str[i] >= 48 && str[i] <= 57)
+	if (str[i] < '0' || str[i] > '9')
+		return (LONG_MAX);
+	while (str[i] >= '0' && str[i] <= '9')
 	{
-		a = a * 10 + str[i] - 48;
-		i++;
+		a = a * 10 + (str[i++] - '0') * signe;
+		if (a > INT_MAX || a < INT_MIN)
+			return (LONG_MAX);
 	}
-	return (a * signe);
+	if (str[i])
+		return (LONG_MAX);
+	return (a);
 }

@@ -6,7 +6,7 @@
 /*   By: miguiji <miguiji@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/06/09 04:46:15 by miguiji           #+#    #+#             */
-/*   Updated: 2024/07/17 00:31:01 by miguiji          ###   ########.fr       */
+/*   Updated: 2024/07/17 05:44:55 by miguiji          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,17 +17,21 @@ void	free_philo(t_philo *philo)
 	int	i;
 
 	i = 0;
+	if (!philo)
+		return ;
+	pthread_mutex_destroy(philo->meals_lock);
+	pthread_mutex_destroy(philo->print_lock);
+	free(philo->meals_lock);
+	free(philo->print_lock);
 	while (i < philo->args->num_philo)
 	{
 		pthread_mutex_destroy(&philo->forks[i]);
 		pthread_mutex_destroy(philo[i].last_time_eat_lock);
-		pthread_mutex_destroy(philo[i].print_lock);
 		free(philo[i].last_time_eat_lock);
 		i++;
 	}
 	free(philo->args);
 	free(philo->forks);
-	free(philo->print_lock);
 	free(philo);
 }
 
